@@ -203,8 +203,9 @@
         async function shareQRCode(index) {
             try {
                 const entry = entries[index];
-                const qrCodeElement = document.getElementById(`qr-code-${index}`).querySelector('img');
-                const qrCodeUrl = qrCodeElement.src;
+                const qrCodeDiv = document.getElementById(`qr-code-${index}`);
+                const qrCodeImage = qrCodeDiv.querySelector('img');
+                const qrCodeUrl = qrCodeImage.src;
 
                 if (navigator.share) {
                     await navigator.share({
