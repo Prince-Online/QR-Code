@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPI Payment QR Code Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .form-container, .entry-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+            margin-bottom: 20px;
+        }
+
+        form label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        form input {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        form button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        }
+
+        form button:hover {
+            background-color: #0056b3;
+        }
+
+        .entry {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .entry h3 {
+            margin: 0 0 10px 0;
+            color: #555;
+        }
+
+        .entry img {
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 10px;
+        }
+
+        .share-button {
+            background-color: #28a745;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .share-button:hover {
+            background-color: #218838;
+        }
+
+        #add-entry {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #007bff;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 30px;
+            cursor: pointer;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+        }
+
+        #add-entry:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>UPI Payment QR Code Generator</h1>
+    
+    <div class="form-container" id="form-container">
+        <form id="payment-form" onsubmit="generateQRCode(); return false;">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" required>
+            
+            <label for="upi-id">UPI ID:</label>
+            <input type="text" id="upi-id" name="upi-id" required>
+            
+            <label for="amount">Amount:</label>
+            <input type="number" id="amount" name="amount" step="0.01" required>
+            
+            <button type="submit">Generate QR Code</button>
+        </form>
+    </div>
+
+    <div id="entries-container" class="entry-container"></div>
+
+    <div id="add-entry">+</div>
+
+    <script>
+        let entries = [];
+
+        function generateQRCode() {
+            const name = document.getElementById('name').value;
+            const upiId = document.getElementById('upi-id').value;
+            const amount = document.getElementById('amount').value;
+            const upiUrl = `upi://pay?pa=${upiId}&am=${amount}`;
+
+            const entry = {
+                name,
+                upiId,
+                amount,
+                upiUrl
+            };
+            
+            entries.push(entry);
+            saveEntries();
+            displayEntries();
+
+            document.getElementById('form-container').style.display = 'none';
+            document.getElementById('add-entry').style.display = 'flex';
+        }
+
+        function saveEntries() {
+            localStorage.setItem('entries', JSON.stringify(entries));
+        }
+
+        function loadEntries() {
+            const savedEntries = localStorage.getItem('entries');
+            if (savedEntries) {
+                entries = JSON.parse(savedEntries);
+                displayEntries();
+            }
+        }
+
+        function displayEntries() {
+            const container = document.getElementById('entries-container');
+            container.innerHTML = '';
+
+            entries.forEach((entry, index) => {
+                const entryDiv = document.createElement('div');
+                entryDiv.className = 'entry';
+                
+                const entryTitle = document.createElement('h3');
+                entryTitle.textContent = `${entry.name} - ₹${entry.amount}`;
+                
+                const qrCodeDiv = document.createElement('div');
+                qrCodeDiv.id = `qr-code-${index}`;
+                
+                const shareButton = document.createElement('button');
+                shareButton.className = 'share-button';
+                shareButton.textContent = 'Share QR Code';
+                shareButton.onclick = () => shareQRCode(index);
+
+                entryDiv.appendChild(entryTitle);
+                entryDiv.appendChild(qrCodeDiv);
+                entryDiv.appendChild(shareButton);
+                container.appendChild(entryDiv);
+
+                new QRCode(qrCodeDiv, entry.upiUrl);
+            });
+        }
+
+        async function shareQRCode(index) {
+            try {
+                const entry = entries[index];
+                const qrCodeElement = document.getElementById(`qr-code-${index}`).querySelector('img');
+                const qrCodeUrl = qrCodeElement.src;
+
+                if (navigator.share) {
+                    await navigator.share({
+                        title: 'UPI Payment QR Code',
+                        text: `Pay ${entry.name} ₹${entry.amount}`,
+                        url: qrCodeUrl,
+                    });
+                } else {
+                    alert('Web Share API is not supported in your browser.');
+                }
+            } catch (error) {
+                console.error('Error sharing QR code:', error);
+            }
+        }
+
+        document.getElementById('add-entry').addEventListener('click', () => {
+            document.getElementById('form-container').style.display = 'block';
+            document.getElementById('add-entry').style.display = 'none';
+        });
+
+        window.onload = loadEntries;
+    </script>
+
+</body>
+</html>
